@@ -54,7 +54,7 @@ def load_dictionary(path:str) -> List[Dict[str, Any]]:
                 for sub_element in element:
                     tag = sub_element.tag
                     text = sub_element.text
-                    if tag in new_entry:
+                    if tag in sub_dict:
                         try:
                             sub_dict[tag] += ', '+text
                         except Exception as e:
