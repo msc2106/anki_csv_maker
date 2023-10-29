@@ -4,7 +4,7 @@ from typing import List
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import basicConfig, debug, DEBUG
-basicConfig(level=DEBUG)
+# basicConfig(level=DEBUG)
 
 lookup_path = "C:/Users/marks/coding/anki_csv_maker/tables/search_index.csv.gz"
 dict_path = "C:/Users/marks/coding/anki_csv_maker/tables/anki_entries.csv.gz"
@@ -75,15 +75,19 @@ def main():
 
 
 def read_word_list(path):
-    filetype = path[-3:]
+    filetype = path.split('.')[-1]
     if filetype == 'txt':
         with open(path, encoding='utf8') as f:
             words = [l.strip() for l in f]
-        return words
     elif filetype == 'html':
-        raise NotImplementedError("Haven't written html support yet")
+        with open(path, encoding='utf8') as f:
+            words = [
+                entry.text.split('\n')[0] for entry in
+                BeautifulSoup(f, features='html.parser').find_all("div", {'class':'noteText'})
+            ]
     else:
         raise NotImplementedError(f'Cannot handle {filetype} files.')
+    return words
 
 
 def get_matches(search_index:pd.DataFrame, word:str) -> List[int]:
