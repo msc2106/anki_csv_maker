@@ -68,10 +68,28 @@ def main():
                 
     debug(entries)
     anki_table = anki_entries.loc[entries]
-    print(anki_table)
-    if input("Save these entries? [y]/n: ").strip() != 'n':
+    full_output(anki_table)
+    try:
+        size = int(input("Enter max words per input, 0 to save all together, or any non-number to cancel: "))
+        save_tables(anki_table, output_path, size)
+    except:
+        print("Did not save tables.")
+
+
+def save_tables(anki_table, output_path, size):
+    entry_count = anki_table.shape[0]
+    file_count = 1 if not size else entry_count // size + 1 
+    if file_count == 1:
         output_file = f'{output_path}/{datetime.today().strftime("%Y.%m.%d")}.csv'
         anki_table.to_csv(output_file, index=False, header=False)
+        print(f"Saved {output_file}")
+    else:
+        for i in range(file_count):
+            start = i * size
+            end = start + size
+            output_file = f'{output_path}/{datetime.today().strftime("%Y.%m.%d")}.{i+1:02}.csv'
+            anki_table.iloc[start:end, :].to_csv(output_file, index=False, header=False)
+            print(f"Saved {output_file}")
 
 
 def read_word_list(path):
@@ -101,6 +119,13 @@ def get_option(prompt, valid_responses):
         if response in valid_responses:
             break
     return response
+
+
+def full_output(df: pd.DataFrame):
+    cols = df.columns
+    for i, row in df.iterrows():
+        print(i, *(row[col] for col in cols))
+    print(df.shape[0], "entries in total.")
 
 
 if __name__ == '__main__':
