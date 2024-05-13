@@ -1,6 +1,5 @@
 import pandas as pd
 from sys import argv
-from typing import List
 from bs4 import BeautifulSoup
 from datetime import datetime
 from logging import basicConfig, debug, DEBUG
@@ -8,6 +7,7 @@ from logging import basicConfig, debug, DEBUG
 
 lookup_path = "C:/Users/marks/coding/anki_csv_maker/tables/search_index.csv.gz"
 dict_path = "C:/Users/marks/coding/anki_csv_maker/tables/anki_entries.csv.gz"
+default_save = "G:/My Drive/learning/Languages/日本語/anki import"
 
 def main():
     # load dictionaries (hardcoded)
@@ -19,9 +19,15 @@ def main():
     # display full list, give option to adjust any (delete, re-search) or save
     # save to given path (2nd argument)
     
-    if len(argv) != 3:
-        print("Usage: prepare_anki_import.py [word list] [dest path]")
-    word_list_path, output_path = argv[1:]
+    if len(argv) not in [2, 3]:
+        print("Usage: prepare_anki_import.py <word list> [<dest path>]")
+        print("Word list can be text list of words or kindle notes export html.")
+    if len(argv) == 2:
+        print(f"Defaulting save path to {default_save}")
+        output_path = default_save
+        word_list_path = argv[1]
+    else:
+        word_list_path, output_path = argv[1:3]
     search_index = pd.read_csv(lookup_path, index_col=0)
     anki_entries = pd.read_csv(dict_path, index_col=0)
     word_list = read_word_list(word_list_path)
@@ -108,7 +114,7 @@ def read_word_list(path):
     return words
 
 
-def get_matches(search_index:pd.DataFrame, word:str) -> List[int]:
+def get_matches(search_index:pd.DataFrame, word:str) -> list[int]:
     return list(search_index.id[search_index.entry == word])
 
 
