@@ -1,33 +1,19 @@
 import pandas as pd
+import os
 from sys import argv
 from bs4 import BeautifulSoup
 from datetime import datetime
+from pathlib import Path
 from logging import basicConfig, debug, DEBUG
 # basicConfig(level=DEBUG)
 
-lookup_path = "C:/Users/marks/coding/anki_csv_maker/tables/search_index.csv.gz"
-dict_path = "C:/Users/marks/coding/anki_csv_maker/tables/anki_entries.csv.gz"
-default_save = "G:/My Drive/learning/Languages/日本語/anki import"
+lookup_path = Path("C:/Users/marks/coding/anki_csv_maker/tables/search_index.csv.gz")
+dict_path = Path("C:/Users/marks/coding/anki_csv_maker/tables/anki_entries.csv.gz")
+default_save_absolute = Path("G:/My Drive/learning/Languages/日本語/anki import")
+default_save_relative = (Path.cwd() / ".." / "anki import").resolve()
 
 def main():
-    # load dictionaries (hardcoded)
-    # load vocab list (1st argument)
-    # for each item in list:
-    ## if single match, save entry row to list
-    ## if no match, prompt to adjust or skip
-    ## if multiple match, prompt for which to add (one, a subset, all, or none) or to reenter
-    # display full list, give option to adjust any (delete, re-search) or save
-    # save to given path (2nd argument)
-    
-    if len(argv) not in [2, 3]:
-        print("Usage: prepare_anki_import.py <word list> [<dest path>]")
-        print("Word list can be text list of words or kindle notes export html.")
-    if len(argv) == 2:
-        print(f"Defaulting save path to {default_save}")
-        output_path = default_save
-        word_list_path = argv[1]
-    else:
-        word_list_path, output_path = argv[1:3]
+    word_list_path, output_path = get_parameters()
     search_index = pd.read_csv(lookup_path, index_col=0)
     anki_entries = pd.read_csv(dict_path, index_col=0)
     word_list = read_word_list(word_list_path)
@@ -69,7 +55,7 @@ def main():
                         new_entries = subset
                     break # loop terminates unless explicitly continued
             debug("end search loop")
-        debug('exit search loop')
+        debug("exit search loop")
         entries.extend(new_entries)
                 
     debug(entries)
@@ -80,6 +66,55 @@ def main():
         save_tables(anki_table, output_path, size)
     except:
         print("Did not save tables.")
+
+def get_parameters():
+    if len(argv) == 2:
+        print(f"Defaulting save path to {default_save_absolute}")
+        output_path = default_save_absolute
+        word_list_path = Path(argv[1])
+    elif len(argv) == 3:
+        word_list_path, output_path = map(Path, argv[1:3])
+    else:
+        readable_files = [filename for filename in os.listdir(Path.cwd()) if filename[-4:] in [".txt", "html"]]
+        if not readable_files:
+            print("No readable files in current directory.")
+            exit()
+        chosen_index = None
+        while chosen_index is None:
+            for i, filename in enumerate(readable_files):
+                print(i+1, filename)
+            try:
+                choice = int(input("Choose file, or 0 to exit: ").strip())
+            except ValueError:
+                print("Input not a valid number")
+                continue
+            if choice > 0 and choice <= len(readable_files):
+                chosen_index = choice - 1
+            elif choice == 0:
+                exit()
+            else:
+                print("Input out of range")
+                continue
+        word_list_path = Path.cwd() / readable_files[chosen_index]
+        output_path = None
+        while output_path is None:
+            output_choice_str = input(f"Enter save path, or blank to use {default_save_relative}\n").strip()
+            if output_choice_str:
+                try:
+                    output_choice = Path(output_choice_str)
+                except ValueError:
+                    print("Could not interpret as path")
+                    continue
+                if not output_choice.is_dir():
+                    print("Save path must be a directory")
+                    continue
+                if not output_choice.exists():
+                    print("Save path must already exist")
+                    continue
+                output_path = output_choice
+            else:
+                output_path = default_save_absolute
+    return word_list_path, output_path
 
 
 def save_tables(anki_table, output_path, size):
@@ -98,12 +133,12 @@ def save_tables(anki_table, output_path, size):
             print(f"Saved {output_file}")
 
 
-def read_word_list(path):
-    filetype = path.split('.')[-1]
-    if filetype == 'txt':
+def read_word_list(path: Path):
+    _, filetype = os.path.splitext(path)
+    if filetype == '.txt':
         with open(path, encoding='utf8') as f:
             words = [l.strip() for l in f]
-    elif filetype == 'html':
+    elif filetype == '.html':
         with open(path, encoding='utf8') as f:
             words = [
                 entry.text.split('\n')[0] for entry in
